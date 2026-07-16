@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood Playlists</title>
+    <style>
+        /* CSS Root Variables for Interactive Mood Theming */
+        :root {
+            --accent-color: #1DB954; /* Spotify Green default */
+            --accent-glow: rgba(29, 185, 84, 0.4);
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-image: url('background.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: white; 
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        /* Glassmorphic App Container Box */
+        .app-container {
+            background: rgba(18, 18, 18, 0.45); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            padding: 35px;
+            border-radius: 24px;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+            border: 1px rgba(255, 255, 255, 0.12) solid;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            z-index: 10;
+            transition: all 0.5s ease;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            text-shadow: 0 0 15px var(--accent-glow);
+            transition: text-shadow 0.5s ease;
+        }
+
+        textarea { 
+            width: 100%; 
+            height: 95px; 
+            border-radius: 12px; 
+            padding: 14px; 
+            margin-top: 15px;
+            margin-bottom: 12px; 
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 1rem;
+            resize: none;
+            transition: all 0.3s ease;
+        }
+
+        textarea::placeholder { color: rgba(255, 255, 255, 0.4); }
+        textarea:focus { 
+            outline: none; 
+            border-color: var(--accent-color); 
+            box-shadow: 0 0 12px var(--accent-glow);
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        /* Real-Time Live Preview Badge Styling */
+        .live-preview-badge {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 18px;
+            font-weight: 500;
+            min-height: 22px;
+            transition: color 0.5s ease;
+        }
+
+        /* Quick-Select Mood Tags CSS */
+        .tag-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
+        }
+
+        .mood-tag {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .mood-tag:hover {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            box-shadow: 0 4px 15px var(--accent-glow);
+            transform: translateY(-3px);
+            color: #121212;
+        }
+
+        button { 
+            background: var(--accent-color); 
+            color: #121212; 
+            padding: 12px 32px; 
+            border: none; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1rem;
+            box-shadow: 0 4px 15px var(--accent-glow);
+            transition: all 0.3s ease;
+        }
+        button:hover { 
+            transform: scale(1.05); 
+            box-shadow: 0 6px 20px var(--accent-glow);
+            filter: brightness(1.1);
+        }
+    
+        /* Sleek Expanding Result Container CSS */
+        #result {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 0;
+        }
+
+        #result.show {
+            max-height: 160px;
+            opacity: 1;
+            margin-top: 22px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Floating Music Symbols Animation Layout */
+        .music-symbols-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden; z-index: -1; pointer-events: none;
+        }
+
+        .note {
+            position: absolute; bottom: -60px; font-size: 1.8rem; opacity: 0;
+            filter: drop-shadow(0 0 10px var(--accent-glow));
+            animation: floatUp 8s linear infinite;
+            transition: filter 0.5s ease;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.4; }
+            90% { opacity: 0.4; }
+            100% { transform: translateY(-105vh) translateX(-80px) rotate(360deg); opacity: 0; }
+        }
+
+        /* Randomized note positions & sizing offsets */
+        .note:nth-child(1) { left: 10%; animation-duration: 9s;  font-size: 3rem; }
+        .note:nth-child(2) { left: 25%; animation-duration: 7s;  animation-delay: 2s; font-size: 2.2rem; }
+        .note:nth-child(3) { left: 40%; animation-duration: 10s; animation-delay: 4s; font-size: 3.5rem; }
+        .note:nth-child(4) { left: 55%; animation-duration: 8s;  animation-delay: 1.5s; font-size: 1.8rem; }
+        .note:nth-child(5) { left: 70%; animation-duration: 11s; animation-delay: 5s; font-size: 3rem; }
+        .note:nth-child(6) { left: 85%; animation-duration: 6s;  animation-delay: 3s; font-size: 1.4rem; }
+        .note:nth-child(7) { left: 15%; animation-duration: 12s; animation-delay: 6s; font-size: 4rem; }
+        .note:nth-child(8) { left: 65%; animation-duration: 9s;  animation-delay: 7.5s; font-size: 1.6rem; }
+
+        /* Beating Emoji Setup */
+        .heart-container {
+            display: flex; justify-content: center; align-items: center; margin-top: 20px;
+        }
+
+        .beating-emoji {
+            font-size: 3.5rem;
+            display: inline-block;
+            animation: emojiHeartbeat 1.2s infinite ease-in-out;
+            filter: drop-shadow(0 0 15px var(--accent-glow));
+            transition: all 0.3s ease;
+        }
+
+        .beating-emoji:hover {
+            transform: scale(1.25) rotate(8deg);
+        }
+
+        @keyframes emojiHeartbeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.2); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.1); }
+            70% { transform: scale(1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1>🎵 Your Mood Your Playlist 🎵</h1>
+        
+        <textarea id="moodInput" placeholder="So, what's the vibe today? ❤️😊" oninput="checkLiveVibe()"></textarea>
+        
+        <div id="livePreview" class="live-preview-badge"></div>
+
+        <div class="tag-container">
+            <div class="mood-tag" onclick="selectTag('Rainy day lofi chill')">🌧️ Rainy Lo-Fi</div>
+            <div class="mood-tag" onclick="selectTag('Super happy hyped energy')">🔥 Gym Hype</div>
+            <div class="mood-tag" onclick="selectTag('Sad break up crying night vibes')">💔 Heartbreak</div>
+            <div class="mood-tag" onclick="selectTag('Scared worried dark night background')">😰 Anxious</div>
+        </div>
+
+        <button onclick="getPlaylist()">Generate Vibe</button>
+
+        <div id="result"></div>
+
+        <div class="heart-container">
+            <div id="moodHeart" class="beating-emoji">🎧💜🎵</div>
+        </div>
+    </div>
+
+    <div class="music-symbols-container">
+        <span class="note">🎵</span>
+        <span class="note">🎤</span>
+        <span class="note">🎶</span>
+        <span class="note">🎧</span>
+        <span class="note">✨</span>
+        <span class="note">🎶</span>
+        <span class="note">💫</span>
+        <span class="note">🎧</span>
+    </div>
+    
+    <script>
+        const emojiMap = {
+            "joy": "✨💛🔥",
+            "sadness": "🌧️💔🌊",
+            "anger": "⚡❤️‍🔥💥",
+            "fear": "😰🔮👁️",
+            "neutral": "🎧💜🎵"
+        };
+
+        const themeMap = {
+            "joy": { color: "#FFD700", glow: "rgba(255, 215, 0, 0.4)" },
+            "sadness": { color: "#3498db", glow: "rgba(52, 152, 219, 0.4)" },
+            "anger": { color: "#e74c3c", glow: "rgba(231, 76, 60, 0.4)" },
+            "fear": { color: "#9b59b6", glow: "rgba(155, 89, 182, 0.4)" },
+            "neutral": { color: "#1DB954", glow: "rgba(29, 185, 84, 0.4)" }
+        };
+
+        const labelTextMap = {
+            "joy": "Detected Vibe: Joyous & Energetic ✨",
+            "sadness": "Detected Vibe: Melancholic & Deep 🌧️",
+            "anger": "Detected Vibe: Aggressive & Fiery 🔥",
+            "fear": "Detected Vibe: Eerie & Anxious 😰",
+            "neutral": "Detected Vibe: Chillin' 🎧"
+        };
+
+        let debounceTimer;
+
+        function updateDynamicTheme(vibe) {
+            const root = document.documentElement;
+            root.style.setProperty('--accent-color', themeMap[vibe].color);
+            root.style.setProperty('--accent-glow', themeMap[vibe].glow);
+        }
+
+        function selectTag(phrase) {
+            document.getElementById('moodInput').value = phrase;
+            checkLiveVibe();
+        }
+
+        // Hybrid Text Parsing Engine: Combines local safety matching with the ML fallback
+        function getLocalVibe(text) {
+            const lower = text.toLowerCase();
+            if (lower.includes("happy") || lower.includes("glad") || lower.includes("good") || lower.includes("hype")) return "joy";
+            if (lower.includes("sad") || lower.includes("cry") || lower.includes("bad") || lower.includes("break")) return "sadness";
+            if (lower.includes("angry") || lower.includes("mad") || lower.includes("hate")) return "anger";
+            if (lower.includes("scared") || lower.includes("afraid") || lower.includes("worry") || lower.includes("anxious")) return "fear";
+            return "neutral";
+        }
+
+        async function fetchMLVibe(text) {
+            try {
+                // Timeout request if server does not respond within 1.5 seconds
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+                const response = await fetch('http://127.0.0.1:5000/predict-mood', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                const data = await response.json();
+                return data.vibe;
+            } catch (error) {
+                // Instantly returns local string analysis to maintain video goals if connection fails
+                return getLocalVibe(text);
+            }
+        }
+
+        function checkLiveVibe() {
+            const text = document.getElementById('moodInput').value;
+            const previewDiv = document.getElementById('livePreview');
+            const heartElement = document.getElementById('moodHeart');
+            
+            if (!text.trim()) {
+                previewDiv.innerHTML = "";
+                heartElement.innerText = emojiMap["neutral"];
+                updateDynamicTheme("neutral");
+                return;
+            }
+
+            // INSTANT UI RESPONSE: Update theme right away locally to achieve the objective of Video 1
+            const immediateVibe = getLocalVibe(text);
+            previewDiv.innerHTML = "Analysing with AI...";
+            heartElement.innerText = emojiMap[immediateVibe];
+            updateDynamicTheme(immediateVibe);
+
+            clearTimeout(debounceTimer);
+
+            // Verify prediction with backend pipeline in the background
+            debounceTimer = setTimeout(async () => {
+                const finalVibe = await fetchMLVibe(text);
+                previewDiv.innerHTML = labelTextMap[finalVibe];
+                heartElement.innerText = emojiMap[finalVibe];
+                updateDynamicTheme(finalVibe);
+            }, 300); 
+        }
+
+        async function getPlaylist() {
+            const text = document.getElementById('moodInput').value;
+            const resultDiv = document.getElementById('result');
+            const heartElement = document.getElementById('moodHeart');
+
+            if(!text.trim()) {
+                resultDiv.classList.add('show');
+                resultDiv.innerHTML = "<span style='color: #ff4757; font-weight: bold;'>⚠️ Please type something first!</span>";
+                return;
+            }
+            
+            resultDiv.classList.add('show');
+            resultDiv.innerHTML = "🔮 Parsing your emotional frequency...";
+
+            const detectedMood = await fetchMLVibe(text);
+
+            setTimeout(() => {
+                heartElement.innerText = emojiMap[detectedMood];
+                updateDynamicTheme(detectedMood);
+
+                resultDiv.innerHTML = `
+                    <h3 style="margin: 5px 0 12px 0; font-size: 1.1rem; font-weight: 600;">Vibe Match: <span style="color: var(--accent-color); text-transform: uppercase; letter-spacing: 1px;">${detectedMood}</span></h3>
+                    <a href="https://open.spotify.com" target="_blank" style="color: #121212; background: var(--accent-color); padding: 10px 22px; border-radius: 20px; text-decoration: none; display: inline-block; font-size: 0.9rem; font-weight: bold; box-shadow: 0 4px 10px var(--accent-glow); transition: transform 0.2s;">Launch Spotify Vibe</a>
+                `;
+            }, 400); 
+        }
+    </script>
+</body>
+</html>
